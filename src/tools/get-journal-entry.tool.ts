@@ -8,7 +8,7 @@ const toolDescription = "Get a journal entry by Id from QuickBooks Online.";
 
 // Define the expected input schema for getting a journal entry
 const toolSchema = z.object({
-  id: z.string(),
+  id: z.string().describe("QuickBooks JournalEntry Id (numeric string, e.g. \"123\")"),
 });
 
 type ToolParams = z.infer<typeof toolSchema>;

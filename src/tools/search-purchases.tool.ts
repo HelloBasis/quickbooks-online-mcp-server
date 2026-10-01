@@ -1,5 +1,6 @@
 import { searchQuickbooksPurchases } from "../handlers/search-quickbooks-purchases.handler.js";
 import { ToolDefinition } from "../types/tool-definition.js";
+import { filterSchema, paginationFields } from "../helpers/search-schema.js";
 import { z } from "zod";
 
 // Define the tool metadata
@@ -8,13 +9,15 @@ const toolDescription = "Search purchases in QuickBooks Online that match given 
 
 // Define the expected input schema for searching purchases
 const toolSchema = z.object({
-  criteria: z.array(z.any()).optional(),
-  asc: z.string().optional(),
-  desc: z.string().optional(),
-  limit: z.number().optional(),
-  offset: z.number().optional(),
-  count: z.boolean().optional(),
-  fetchAll: z.boolean().optional(),
+  criteria: z
+    .array(
+      filterSchema(
+        z.string().describe("Purchase property to filter on, e.g. TxnDate, AccountRef, PaymentType, TotalAmt, EntityRef")
+      )
+    )
+    .optional()
+    .describe("Filters ANDed together. Each is {field, value, operator?}; operator defaults to '='. Omit to return the first 1000 purchases."),
+  ...paginationFields(),
 });
 
 type ToolParams = z.infer<typeof toolSchema>;

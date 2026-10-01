@@ -5,8 +5,8 @@ import { z } from "zod";
 const toolName = "search_tax_agencies";
 const toolDescription = "Search for tax agencies in QuickBooks Online with optional filters.";
 const toolSchema = z.object({
-  name: z.string().optional().describe("Filter by tax agency name"),
-  limit: z.number().optional().describe("Maximum results to return"),
+  name: z.string().optional().describe("Filter by tax agency DisplayName (exact match, no wildcards)"),
+  limit: z.number().optional().describe("Maximum rows to return (default and max 1000)"),
 });
 
 const toolHandler = async ({ params }: any) => {

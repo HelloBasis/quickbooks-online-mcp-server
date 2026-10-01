@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const toolName = "get_customer";
 const toolDescription = "Get a customer by Id from QuickBooks Online.";
-const toolSchema = z.object({ id: z.string() });
+const toolSchema = z.object({ id: z.string().describe("QuickBooks Customer Id (numeric string, e.g. \"123\")") });
 
 type ToolParams = z.infer<typeof toolSchema>;
 

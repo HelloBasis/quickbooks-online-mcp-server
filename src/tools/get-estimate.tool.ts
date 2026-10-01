@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const toolName = "get_estimate";
 const toolDescription = "Get an estimate by Id from QuickBooks Online.";
-const toolSchema = z.object({ id: z.string() });
+const toolSchema = z.object({ id: z.string().describe("QuickBooks Estimate Id (numeric string, e.g. \"123\")") });
 
 const toolHandler = async (args: any) => {
   const response = await getQuickbooksEstimate(args.params.id);

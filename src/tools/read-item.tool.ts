@@ -6,7 +6,7 @@ const toolName = "read_item";
 const toolDescription = "Read a single item in QuickBooks Online by its ID.";
 
 const toolSchema = z.object({
-  item_id: z.string().min(1, { message: "Item ID is required" }),
+  item_id: z.string().min(1, { message: "Item ID is required" }).describe("QuickBooks Item Id (numeric string, e.g. \"123\")"),
 });
 
 const toolHandler = async ({ params }: any) => {

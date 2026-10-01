@@ -5,7 +5,7 @@ import { z } from "zod";
 const toolName = "get-vendor";
 const toolDescription = "Get a vendor by ID from QuickBooks Online.";
 const toolSchema = z.object({
-  id: z.string(),
+  id: z.string().describe("QuickBooks Vendor Id (numeric string, e.g. \"123\")"),
 });
 
 const toolHandler = async (args: { [x: string]: any }) => {

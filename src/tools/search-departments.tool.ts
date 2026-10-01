@@ -5,9 +5,9 @@ import { z } from "zod";
 const toolName = "search_departments";
 const toolDescription = "Search for departments in QuickBooks Online with optional filters.";
 const toolSchema = z.object({
-  name: z.string().optional().describe("Filter by department name"),
+  name: z.string().optional().describe("Filter by department Name (exact match, no wildcards)"),
   active: z.boolean().optional().describe("Filter by active status"),
-  limit: z.number().optional().describe("Maximum results to return"),
+  limit: z.number().optional().describe("Maximum rows to return (default and max 1000)"),
 });
 
 const toolHandler = async ({ params }: any) => {

@@ -12,7 +12,7 @@ const toolDescription =
   "to an allowlist directory that the resolved path must live inside.";
 
 const toolSchema = z.object({
-  invoice_id: z.string().min(1, { message: "Invoice ID is required" }),
+  invoice_id: z.string().min(1, { message: "Invoice ID is required" }).describe("QuickBooks Invoice Id (numeric string, e.g. \"123\")"),
   output_path: z
     .string()
     .min(1)

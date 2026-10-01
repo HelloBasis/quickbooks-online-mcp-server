@@ -427,6 +427,41 @@ npm test
 
 The test suite includes **396 tests** with **100% code coverage** across all metrics (statements, branches, functions, lines).
 
+### Standalone CLI (read-only)
+
+A self-contained `quickbooks` binary can be generated from this server with [mcporter](https://github.com/openclaw/mcporter). Every read tool becomes a subcommand; `quickbooks <command> --help` prints a runnable example and the tool's full JSON input schema, so an agent or a person can drive it from the shell without an MCP client. The binary spawns `node dist/index.js` as a stdio subprocess, so the build and `.env` must be present on the machine that runs it.
+
+```bash
+npm run build
+TOOLS=$(ls src/tools | grep '^get-\|^search-\|^read-' | sed 's/\.tool\.ts$//; s/-/_/g; s/^get_bill$/get-bill/; s/^get_vendor$/get-vendor/' | paste -sd, -)
+npx mcporter generate-cli --name quickbooks --command "node $PWD/dist/index.js" \
+  --description "QuickBooks Online (read-only) CLI" --include-tools "$TOOLS" \
+  --timeout 120000 --compile ./quickbooks            # add --compile-target bun-linux-x64 for an EC2 build
+
+./quickbooks --help
+./quickbooks search-customers -o json --params '{"criteria":[{"field":"DisplayName","value":"%Smith%","operator":"LIKE"}],"limit":20}'
+```
+
+Generated binaries are gitignored. The `--compile-target` flag and the schema-in-help output come from the [HelloBasis/mcporter](https://github.com/HelloBasis/mcporter) fork (branch `aria`) until those changes land upstream.
+
+#### Server image for Aria (branch `aria`)
+
+This fork does not build the CLI itself. `Dockerfile.server` publishes the **built server** — `dist/`, production `node_modules`, `package.json`, `aria/wrapper.sh` — as a scratch image containing only `/opt/quickbooks`. The Aria sandbox image copies that tree into an [mcporter toolchain image](https://github.com/HelloBasis/mcporter) and runs `generate-cli` there, so tool selection and CLI generation are the consumer's responsibility. The `server-image` workflow pushes it to GHCR for linux/amd64 and linux/arm64 on **every push to `aria`** (doc-only pushes excluded):
+
+| Image tag | Meaning |
+|---|---|
+| `ghcr.io/hellobasis/quickbooks-online-mcp-server:aria` | newest push to `aria` (moving) |
+| `…:sha-<short commit>` | that exact build (fixed) — use to freeze a deployment |
+
+```bash
+git push origin aria                                                    # → CI publishes :aria and :sha-…
+docker build -f Dockerfile.server -t quickbooks-online-mcp-server:local . # local equivalent
+```
+
+At runtime the server runs in *access-token mode* (`QUICKBOOKS_ACCESS_TOKEN` supplied by the host, no `.env`, no refresh); see `src/clients/quickbooks-client.ts`.
+
+Keep `main` tracking upstream (`intuit/quickbooks-online-mcp-server`) and rebase or merge it into `aria` to pick up upstream fixes.
+
 ### Project Structure
 
 ```

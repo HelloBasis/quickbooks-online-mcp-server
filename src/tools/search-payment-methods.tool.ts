@@ -5,10 +5,10 @@ import { z } from "zod";
 const toolName = "search_payment_methods";
 const toolDescription = "Search for payment methods in QuickBooks Online with optional filters.";
 const toolSchema = z.object({
-  name: z.string().optional().describe("Filter by payment method name"),
+  name: z.string().optional().describe("Filter by payment method Name (exact match, no wildcards)"),
   active: z.boolean().optional().describe("Filter by active status"),
   type: z.enum(["CREDIT_CARD", "NON_CREDIT_CARD"]).optional().describe("Filter by payment method type"),
-  limit: z.number().optional().describe("Maximum results to return"),
+  limit: z.number().optional().describe("Maximum rows to return (default and max 1000)"),
 });
 
 const toolHandler = async ({ params }: any) => {

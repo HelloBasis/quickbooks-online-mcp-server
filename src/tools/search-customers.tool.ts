@@ -1,5 +1,6 @@
 import { searchQuickbooksCustomers } from "../handlers/search-quickbooks-customers.handler.js";
 import { ToolDefinition } from "../types/tool-definition.js";
+import { filterValueSchema, operatorSchema, paginationFields } from "../helpers/search-schema.js";
 import { z } from "zod";
 
 const toolName = "search_customers";
@@ -20,18 +21,18 @@ const customerFieldEnum = z.enum([
   "MetaData.CreateTime",
   "MetaData.LastUpdatedTime",
 ]).describe(
-  "Field to filter on – must be a property of the QuickBooks Online Customer entity."
+  "Common filterable properties of the QuickBooks Online Customer entity. Not exhaustive: the simple {key,value} form accepts any Customer property name."
 );
 
 const criterionSchema = z.object({
   key: z.string().describe("Simple key (legacy) – any Customer property name."),
-  value: z.union([z.string(), z.boolean()]),
+  value: filterValueSchema(),
 });
 
 const advancedCriterionSchema = z.object({
   field: customerFieldEnum,
-  value: z.union([z.string(), z.boolean()]),
-  operator: z.enum(["=", "<", ">", "<=", ">=", "LIKE", "IN"]).optional(),
+  value: filterValueSchema(),
+  operator: operatorSchema(),
 });
 
 const toolSchema = z.object({
@@ -41,16 +42,11 @@ const toolSchema = z.object({
     .array(advancedCriterionSchema.or(criterionSchema))
     .optional()
     .describe(
-      "Filters to apply. Use the advanced form {field,value,operator?} for operators or the simple {key,value} pairs."
+      "Filters, ANDed together. Two forms: advanced {field, value, operator?} (operator defaults to '='; supports < > <= >= LIKE IN) or simple {key, value} (equality; an array value means IN). Do not mix the two forms in one call. Omit to return the first 1000 customers."
     ),
 
   // Pagination / sorting / count
-  limit: z.number().optional(),
-  offset: z.number().optional(),
-  asc: z.string().optional(),
-  desc: z.string().optional(),
-  fetchAll: z.boolean().optional(),
-  count: z.boolean().optional(),
+  ...paginationFields(),
 });
 
 const toolHandler = async (args: any) => {
@@ -95,4 +91,4 @@ export const SearchCustomersTool: ToolDefinition<typeof toolSchema> = {
   description: toolDescription,
   schema: toolSchema,
   handler: toolHandler,
-}; 
+};

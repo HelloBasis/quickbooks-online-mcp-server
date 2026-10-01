@@ -6,10 +6,10 @@ const toolName = "search_payments";
 const toolDescription = "Search for payments in QuickBooks Online.";
 
 const toolSchema = z.object({
-  customer_ref: z.string().optional().describe("Filter by customer ID"),
-  txn_date_from: z.string().optional().describe("Filter by date from (YYYY-MM-DD)"),
-  txn_date_to: z.string().optional().describe("Filter by date to (YYYY-MM-DD)"),
-  limit: z.number().optional().describe("Maximum results to return"),
+  customer_ref: z.string().optional().describe("Filter by customer Id (numeric string, e.g. \"123\"); exact match on CustomerRef"),
+  txn_date_from: z.string().optional().describe("Earliest TxnDate, inclusive (YYYY-MM-DD)"),
+  txn_date_to: z.string().optional().describe("Latest TxnDate, inclusive (YYYY-MM-DD)"),
+  limit: z.number().optional().describe("Maximum rows to return (default and max 1000)"),
 });
 
 const toolHandler = async ({ params }: any) => {

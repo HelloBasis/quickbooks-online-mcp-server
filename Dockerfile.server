@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1
+#
+# Publishes the BUILT server as a minimal image whose only content is
+# /opt/quickbooks: dist/, production node_modules, package.json, and
+# aria/wrapper.sh. No CLI is generated here — a consumer (the Aria sandbox
+# image) copies this tree into an mcporter toolchain image and runs
+# `mcporter generate-cli` against `node /opt/quickbooks/dist/index.js`.
+#
+# /opt/quickbooks is only a staging path: the consumer may relocate the tree
+# before generating the CLI (the generated binary embeds wherever dist/index.js
+# ends up). The Aria sandbox puts it at /usr/local/lib/quickbooks.
+#
+#   docker build -f Dockerfile.server -t quickbooks-online-mcp-server:local .
+
+FROM node:24-bookworm-slim AS build
+WORKDIR /opt/quickbooks
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY . .
+RUN npm run build \
+    && install -m 0755 aria/wrapper.sh /opt/quickbooks/wrapper.sh \
+    && npm prune --omit=dev \
+    && rm -rf src tests docs coverage scripts tmp aria .git* Dockerfile* .dockerignore .env.example \
+        CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md README.md eslint.config.js jest.config.js tsconfig*.json
+
+FROM scratch
+COPY --from=build /opt/quickbooks /opt/quickbooks

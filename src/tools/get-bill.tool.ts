@@ -5,7 +5,7 @@ import { z } from "zod";
 const toolName = "get-bill";
 const toolDescription = "Get a bill by ID from QuickBooks Online.";
 const toolSchema = z.object({
-  id: z.string(),
+  id: z.string().describe("QuickBooks Bill Id (numeric string, e.g. \"123\")"),
 });
 
 const toolHandler = async (args: { [x: string]: any }) => {

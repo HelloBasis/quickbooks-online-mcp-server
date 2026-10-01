@@ -5,10 +5,10 @@ import { z } from "zod";
 const toolName = "search_tax_codes";
 const toolDescription = "Search for tax codes in QuickBooks Online with optional filters.";
 const toolSchema = z.object({
-  name: z.string().optional().describe("Filter by tax code name"),
+  name: z.string().optional().describe("Filter by tax code Name (exact match, no wildcards)"),
   active: z.boolean().optional().describe("Filter by active status"),
   taxable: z.boolean().optional().describe("Filter by taxable status"),
-  limit: z.number().optional().describe("Maximum results to return"),
+  limit: z.number().optional().describe("Maximum rows to return (default and max 1000)"),
 });
 
 const toolHandler = async ({ params }: any) => {

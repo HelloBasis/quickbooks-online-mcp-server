@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+tmp
+.git
+.env
+.env.*
+!.env.example
+quickbooks
+quickbooks-*
+quickbooks.ts
+capture-*.txt

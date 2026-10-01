@@ -34,11 +34,20 @@ if (tokenStorePathOverride && !path.isAbsolute(tokenStorePathOverride)) {
 const TOKEN_STORE_PATH =
   tokenStorePathOverride || path.join(__dirname, '..', '..', '.env');
 
+// Access-token mode: a host that owns the OAuth lifecycle (refresh, rotation,
+// re-authorization) hands this process a ready access token and the realm. The
+// server then never refreshes, never touches the token store, and needs no
+// client credentials. Used when the server runs behind a credential proxy that
+// substitutes the real token for a placeholder on the way out.
+const static_access_token = process.env.QUICKBOOKS_ACCESS_TOKEN?.trim() || undefined;
+
 // Use override: true so that values from the token store always win over any
 // empty-string placeholders a host app (e.g. Claude Desktop) may inject via
 // its env config. This prevents the server from starting with blank
 // REFRESH_TOKEN / REALM_ID even when the host config has those keys set to "".
-dotenv.config({ path: TOKEN_STORE_PATH, override: true });
+if (!static_access_token) {
+  dotenv.config({ path: TOKEN_STORE_PATH, override: true });
+}
 
 // Register once at module level — registering inside startOAuthFlow() would
 // accumulate duplicate handlers on every OAuth call.
@@ -58,8 +67,11 @@ const environment = process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox';
 const redirect_uri = process.env.QUICKBOOKS_REDIRECT_URI || 'http://localhost:8000/callback';
 
 // Only throw error if client_id or client_secret is missing
-if (!client_id || !client_secret || !redirect_uri) {
+if (!static_access_token && (!client_id || !client_secret || !redirect_uri)) {
   throw Error("Client ID, Client Secret and Redirect URI must be set in environment variables");
+}
+if (static_access_token && !realm_id) {
+  throw Error("QUICKBOOKS_REALM_ID must be set when QUICKBOOKS_ACCESS_TOKEN is used");
 }
 
 // ── QuickbooksClient ─────────────────────────────────────────────────────────
@@ -78,6 +90,7 @@ export class QuickbooksClient {
   private oauthClient: OAuthClient;
   private isAuthenticating: boolean = false;
   private redirectUri: string;
+  private readonly staticAccessToken?: string;
 
   // Refresh 5 minutes before actual expiry to avoid edge cases
   private static readonly TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -99,6 +112,7 @@ export class QuickbooksClient {
     realmId?: string;
     environment: string;
     redirectUri: string;
+    accessToken?: string;
   }) {
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
@@ -106,6 +120,12 @@ export class QuickbooksClient {
     this.realmId = config.realmId;
     this.environment = config.environment;
     this.redirectUri = config.redirectUri;
+    this.staticAccessToken = config.accessToken;
+    if (this.staticAccessToken) {
+      this.accessToken = this.staticAccessToken;
+      // Freshness is the host's job in this mode; never trip the refresh path.
+      this.accessTokenExpiry = new Date(8640000000000000);
+    }
     this.oauthClient = new OAuthClient({
       clientId: this.clientId,
       clientSecret: this.clientSecret,
@@ -599,6 +619,24 @@ export class QuickbooksClient {
 
     this.authInFlight = (async () => {
       try {
+        if (this.staticAccessToken) {
+          if (!this.quickbooksInstance) {
+            this.quickbooksInstance = new QuickBooks(
+              this.clientId,
+              this.clientSecret,
+              this.staticAccessToken,
+              false,
+              this.realmId!,
+              this.environment === 'sandbox',
+              false,
+              null,
+              '2.0',
+              undefined
+            );
+          }
+          return this.quickbooksInstance;
+        }
+
         if (!this.refreshToken || !this.realmId) {
           await this.startOAuthFlow();
 
@@ -704,10 +742,11 @@ export class QuickbooksClient {
 }
 
 export const quickbooksClient = new QuickbooksClient({
-  clientId: client_id,
-  clientSecret: client_secret,
+  clientId: client_id ?? '',
+  clientSecret: client_secret ?? '',
   refreshToken: refresh_token,
   realmId: realm_id,
   environment: environment,
   redirectUri: redirect_uri,
+  accessToken: static_access_token,
 });

@@ -5,8 +5,8 @@ import { z } from "zod";
 const toolName = "search_vendor_credits";
 const toolDescription = "Search for vendor credits in QuickBooks Online.";
 const toolSchema = z.object({
-  vendor_ref: z.string().optional().describe("Filter by vendor ID"),
-  limit: z.number().optional().describe("Maximum results"),
+  vendor_ref: z.string().optional().describe("Filter by vendor Id (numeric string, e.g. \"123\"); exact match on VendorRef"),
+  limit: z.number().optional().describe("Maximum rows to return (default and max 1000)"),
 });
 
 const toolHandler = async ({ params }: any) => {

@@ -6,7 +6,7 @@ const toolName = "read_invoice";
 const toolDescription = "Read a single invoice from QuickBooks Online by its ID.";
 
 const toolSchema = z.object({
-  invoice_id: z.string().min(1, { message: "Invoice ID is required" }),
+  invoice_id: z.string().min(1, { message: "Invoice ID is required" }).describe("QuickBooks Invoice Id (numeric string, e.g. \"123\")"),
 });
 
 const toolHandler = async ({ params }: any) => {

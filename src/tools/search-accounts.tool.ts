@@ -1,5 +1,6 @@
 import { searchQuickbooksAccounts } from "../handlers/search-quickbooks-accounts.handler.js";
 import { ToolDefinition } from "../types/tool-definition.js";
+import { filterSchema, filterValueSchema, operatorSchema, paginationFields } from "../helpers/search-schema.js";
 import { z } from "zod";
 
 const toolName = "search_accounts";
@@ -66,24 +67,21 @@ function isValidValueType(field: string, value: any): boolean {
 // END ADD FIELD TYPE MAP
 
 // Zod schemas that validate the fields against the above white-lists
-const filterableFieldSchema = z
-  .string()
-  .refine((val) => (ALLOWED_FILTER_FIELDS as readonly string[]).includes(val), {
-    message: `Field must be one of: ${ALLOWED_FILTER_FIELDS.join(", ")}`,
-  });
+const filterableField = () =>
+  z.enum(ALLOWED_FILTER_FIELDS).describe(
+    "Account property to filter on. Value types: Id, Name, Description: string; ParentRef: string Id of the parent account; Classification: string (Asset, Liability, Equity, Revenue, Expense); AccountType: string (e.g. Bank, Expense, Accounts Receivable); SubAccount, Active: boolean; CurrentBalance: number; MetaData.CreateTime, MetaData.LastUpdatedTime: ISO 8601 date-time."
+  );
 
-const sortableFieldSchema = z
-  .string()
-  .refine((val) => (ALLOWED_SORT_FIELDS as readonly string[]).includes(val), {
-    message: `Sort field must be one of: ${ALLOWED_SORT_FIELDS.join(", ")}`,
-  });
+const sortableField = () => z.enum(ALLOWED_SORT_FIELDS).describe("Account property to sort by.");
+
+const pagingKey = () =>
+  z.enum(["limit", "offset", "asc", "desc", "count", "fetchAll"]).describe("Paging/sorting key when used in the array form.");
 
 // Advanced criteria shape
-const operatorSchema = z.enum(["=", "IN", "<", ">", "<=", ">=", "LIKE"]).optional();
-const filterSchema = z.object({
-  field: filterableFieldSchema,
+const runtimeFilterSchema = z.object({
+  field: filterableField(),
   value: z.any(),
-  operator: operatorSchema,
+  operator: operatorSchema(),
 }).superRefine((obj, ctx) => {
   if (!isValidValueType(obj.field, obj.value)) {
     ctx.addIssue({
@@ -94,9 +92,9 @@ const filterSchema = z.object({
 });
 
 const advancedCriteriaSchema = z.object({
-  filters: z.array(filterSchema).optional(),
-  asc: sortableFieldSchema.optional(),
-  desc: sortableFieldSchema.optional(),
+  filters: z.array(runtimeFilterSchema).optional(),
+  asc: sortableField().optional(),
+  desc: sortableField().optional(),
   limit: z.number().optional(),
   offset: z.number().optional(),
   count: z.boolean().optional(),
@@ -163,10 +161,43 @@ function normalizeAccountCriteria(criteria: any): any {
   return criteria;
 }
 
-// Schema exposed to function definition – use broad schema to sidestep $ref errors
-const criteriaSchema = z.any();
-
-const toolSchema = z.object({ criteria: criteriaSchema });
+// Exposed schema. The object variant must be passthrough: the SDK hands the
+// handler the parsed value, and a plain z.object would strip simple-form keys.
+const toolSchema = z.object({
+  criteria: z
+    .union([
+      z
+        .object({
+          filters: z
+            .array(filterSchema(filterableField()))
+            .optional()
+            .describe("Filters ANDed together. Each is {field, value, operator?}; operator defaults to '='."),
+          ...paginationFields(sortableField),
+        })
+        .passthrough()
+        .describe("Advanced form: filters plus paging/sorting."),
+      z
+        .array(
+          z.object({
+            field: z.union([filterableField(), pagingKey()]),
+            value: filterValueSchema(),
+            operator: operatorSchema(),
+          })
+        )
+        .describe(
+          "Array form: filters ANDed together; may also include {field:\"limit\"|\"offset\"|\"asc\"|\"desc\"|\"count\"|\"fetchAll\", value}."
+        ),
+      z
+        .record(z.any())
+        .describe(
+          "Simple form: {FieldName: value, ...}; equality only, an array value means IN. Do not combine with limit/offset/asc/desc/count/fetchAll keys (use the advanced form instead)."
+        ),
+    ])
+    .optional()
+    .describe(
+      "Search criteria in one of three forms (see variants). Omit to return the first 1000 accounts. limit defaults to and is capped at 1000; offset is 1-based."
+    ),
+});
 
 // Tool handler with runtime validation & coercion
 const toolHandler = async ({ params }: any) => {

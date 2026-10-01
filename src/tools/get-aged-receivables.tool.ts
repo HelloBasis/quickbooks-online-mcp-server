@@ -7,7 +7,7 @@ const toolDescription = "Generate an Aged Receivables (A/R Aging) report from Qu
 const toolSchema = z.object({
   report_date: z.string().optional().describe("Report date (YYYY-MM-DD)"),
   customer: z.string().optional().describe("Filter by customer ID"),
-  aging_method: z.enum(["Current", "Report_Date"]).optional().describe("Aging method"),
+  aging_method: z.enum(["Current", "Report_Date"]).optional().describe("Aging method: Current = age balances relative to today; Report_Date = relative to report_date"),
   days_per_aging_period: z.number().optional().describe("Days per aging period (default 30)"),
   num_periods: z.number().optional().describe("Number of aging periods (default 4)"),
 });
