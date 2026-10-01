@@ -42,10 +42,12 @@ jobs:
           file: Dockerfile.server
           platforms: ${{ matrix.platform }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+      # The manifest step globs this directory and uses the FILE NAMES as digests.
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
-          echo "${{ steps.build.outputs.digest }}" | sed 's/^sha256://' > "/tmp/digests/${{ strategy.job-index }}"
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
       - uses: actions/upload-artifact@v4
         with:
           name: digest-${{ strategy.job-index }}
